@@ -1,0 +1,74 @@
+FROM debian:testing-20210621-slim@sha256:f9637b622e2d46491646cbcbb4e5889e26fb7ff14277f061ca82a3f43176286b as build
+
+WORKDIR /work
+
+RUN apt-get update \
+	&& DEBIAN_FRONTEND=noninteractive apt-get -y install \
+		build-essential \
+		cmake \
+		git \
+		python3
+
+RUN git clone https://github.com/ptitSeb/box86
+RUN cd box86 \
+	&& mkdir build \
+	&& cd build \
+	&& cmake .. -DRPI4=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+	&& make -j$(nproc)
+
+FROM debian:testing-20210621-slim@sha256:f9637b622e2d46491646cbcbb4e5889e26fb7ff14277f061ca82a3f43176286b as run
+
+RUN echo "deb http://deb.debian.org/debian/ testing main contrib non-free" > /etc/apt/sources.list \
+ && echo "deb http://deb.debian.org/debian sid main" >> /etc/apt/sources.list \
+ && echo "deb http://deb.debian.org/debian experimental main" >> /etc/apt/sources.list
+
+COPY --from=build /work/box86/build/box86 /usr/local/bin
+COPY --from=build /work/box86/build/system/box86.conf /etc/binfmt.d/ 
+
+# install mesa from experimental
+RUN apt-get update \
+	&& DEBIAN_FRONTEND=noninteractive apt-get -y install -t experimental \
+		libdw1 \
+		libegl-mesa0 \
+		libgl1-mesa-dri \
+		libgl1-mesa-glx \
+		libglx-mesa0 \
+	&& rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update \
+	&& DEBIAN_FRONTEND=noninteractive apt-get -y install -t testing \
+		binutils \
+		coreutils \
+		file \
+		libgdk-pixbuf-2.0-0 \
+		libglib2.0-0 \
+		libgudev-1.0-0 \
+		libpangocairo-1.0-0 \
+		libnm0 \
+		libopenal1 \
+		libsm6 \
+		libtcmalloc-minimal4 \
+		locales \
+		wget \
+		util-linux \
+		xz-utils \
+		zenity \
+	&& rm -rf /var/lib/apt/lists/*
+
+RUN mkdir /tmp/work && cd /tmp/work \
+	&& wget https://steamcdn-a.akamaihd.net/client/installer/steam.deb \
+	&& ar x steam.deb \
+	&& tar xf data.tar.xz -C / \
+	&& rm -rf /tmp/work
+
+RUN sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen \
+	&& locale-gen
+
+ENV LC_ALL en_US.UTF-8
+ENV LANG en_US.UTF-8
+ENV LANGUAGE en_US:en
+
+RUN useradd -ms /bin/bash steamuser
+COPY entry.sh /
+
+CMD /entry.sh

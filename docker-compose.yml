@@ -19,13 +19,17 @@ services:
   steam:
     build: ./steam
     restart: always
-    command: /usr/games/steam +open steam://open/minigameslist
+    labels:
+      # arm needs to register box86 with binfmt_misc using procfs
+      io.balena.features.procfs: '1'
     devices:
       - /dev/dri
     group_add:
       - video
     # CEF requires > 64M shared memory
     shm_size: 256M
+    cap_add:
+      - SYS_ADMIN # required for mounting binfmt_misc
     volumes:
       - steamuser:/home/steamuser/
       - pulse:/run/pulse
