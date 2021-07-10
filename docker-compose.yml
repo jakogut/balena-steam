@@ -1,0 +1,38 @@
+version: '2'
+volumes:
+  steamuser:
+  pulse:
+  xserver:
+services:
+  xserver:
+    build: ./xserver
+    restart: always
+    privileged: true
+    volumes:
+      - xserver:/tmp/.X11-unix
+  pulse:
+    image: balenablocks/audio
+    restart: always
+    privileged: true
+    volumes:
+      - pulse:/run/pulse
+  steam:
+    build: ./steam
+    restart: always
+    command: /usr/games/steam +open steam://open/minigameslist
+    devices:
+      - /dev/dri
+    group_add:
+      - video
+    # CEF requires > 64M shared memory
+    shm_size: 256M
+    volumes:
+      - steamuser:/home/steamuser/
+      - pulse:/run/pulse
+      - xserver:/tmp/.X11-unix
+    environment:
+      DISPLAY: :0
+      PULSE_SERVER: unix:/run/pulse/pulseaudio.socket
+    depends_on:
+      - xserver
+      - pulse
