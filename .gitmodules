@@ -1,6 +1,3 @@
-[submodule "x11"]
-	path = xserver
-	url = git@github.com:balena-io-playground/x11
 [submodule "dbus"]
 	path = dbus
 	url = https://github.com/balena-io-playground/dbus
