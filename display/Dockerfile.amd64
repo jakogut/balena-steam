@@ -1,0 +1,26 @@
+FROM alpine
+
+RUN apk add --update \
+	wayland-libs-cursor \
+	weston \
+	weston-backend-drm \
+	weston-xwayland \
+	weston-shell-desktop \
+	mesa-dri-gallium \
+	libinput \
+	libinput-tools \
+	libinput-udev \
+	eudev \
+	xwayland \
+	dbus \
+	xauth \
+	pulseaudio \
+	pulseaudio-utils \
+	alsa-utils \
+	ttf-liberation
+
+RUN adduser -D user
+COPY weston.ini /etc/
+
+COPY entry.sh .
+CMD ./entry.sh

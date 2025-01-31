@@ -1,0 +1,10 @@
+FROM alpine
+
+RUN apk add --update \
+		seatd \
+		dbus
+
+RUN adduser -D user
+
+COPY entry.sh .
+CMD ./entry.sh

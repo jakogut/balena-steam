@@ -1,0 +1,13 @@
+FROM alpine
+
+RUN apk add --update pulseaudio \
+	alsa-utils \
+	pulseaudio-utils \
+	udev
+
+RUN adduser -D user \
+	&& addgroup -g 29 snd \
+	&& addgroup user snd
+
+COPY entry.sh .
+CMD ./entry.sh

@@ -1,42 +1,73 @@
 version: '2'
 volumes:
-  steamuser:
-  pulse:
-  xserver:
+  steamuser: # stores games
+  display:
+  xserver: # shares xorg server socket provided by Xwayland
+  run:
+
 services:
-  xserver:
-    build: ./xserver
+  config:
+    build: ./config
+    restart: on-failure
+    privileged: true
+
+  seatd:
+    build: ./seatd
     restart: always
     privileged: true
+    labels:
+      io.balena.features.dbus: '1' # systemctl
+    environment:
+      DBUS_SYSTEM_BUS_ADDRESS: unix:path=/host/run/dbus/system_bus_socket
     volumes:
-      - xserver:/tmp/.X11-unix
+      - run:/run
+
   pulse:
-    image: balenablocks/audio
+    build: ./pulse
     restart: always
-    privileged: true
+    ipc: host
+    devices:
+      - /dev/snd
+    group_add:
+      - audio
     volumes:
-      - pulse:/run/pulse
+      - run:/run
+    environment:
+      XDG_RUNTIME_DIR: /run/user/1000
+
+  display:
+    build: ./display
+    restart: always
+    devices:
+      - /dev/dri
+    volumes:
+      - run:/run
+      - xserver:/tmp/.X11-unix
+    environment:
+      XDG_RUNTIME_DIR: /run/user/1000
+    depends_on:
+      - seatd
+
   steam:
     build: ./steam
     restart: always
-    labels:
-      # arm needs to register box86 with binfmt_misc using procfs
-      io.balena.features.procfs: '1'
+    ipc: host
     devices:
       - /dev/dri
     group_add:
       - video
     # CEF requires > 64M shared memory
     shm_size: 256M
-    cap_add:
-      - SYS_ADMIN # required for mounting binfmt_misc
     volumes:
       - steamuser:/home/steamuser/
-      - pulse:/run/pulse
       - xserver:/tmp/.X11-unix
+      - run:/run
     environment:
       DISPLAY: :0
-      PULSE_SERVER: unix:/run/pulse/pulseaudio.socket
+      XDG_RUNTIME_DIR: /run/user/1000
+      WAYLAND_DISPLAY: wayland-1
+    network_mode: host
     depends_on:
-      - xserver
+      - config
+      - display
       - pulse
