@@ -1,0 +1,3 @@
+FROM alpine
+COPY entry.sh /root/entry.sh
+CMD /root/entry.sh

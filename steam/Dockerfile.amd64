@@ -1,18 +1,16 @@
-FROM debian:testing-20210621
+FROM debian:trixie-20250113 as base
 
-RUN echo "deb http://deb.debian.org/debian/ testing main contrib non-free" > /etc/apt/sources.list
+RUN echo "deb http://deb.debian.org/debian/ trixie contrib non-free" \
+	> /etc/apt/sources.list
 RUN dpkg --add-architecture i386
 RUN echo steam steam/question select "I AGREE" | debconf-set-selections \
  && echo steam steam/license note '' | debconf-set-selections
 RUN apt-get update \
 	&& DEBIAN_FRONTEND=noninteractive apt-get -y install \
-	    libappindicator1 \
-	    libappindicator1:i386 \
 	    libegl-mesa0 \
 	    libegl-mesa0:i386 \
             libgl1-mesa-dri \
 	    libgl1-mesa-dri:i386 \
-	    libgl1-mesa-glx \
 	    libglx-mesa0 \
 	    libglx-mesa0:i386 \
 	    libnm0 \
@@ -24,10 +22,13 @@ RUN apt-get update \
 	    mesa-vdpau-drivers:i386 \
 	    mesa-vulkan-drivers \
 	    mesa-vulkan-drivers:i386 \
+	    nscd \
 	    pciutils \
 	    steam \
 	    util-linux \
-	    vulkan-tools
+	    vulkan-tools \
+	    fonts-liberation \
+	    pulseaudio-utils
 
 RUN ln -sf /usr/games/steam /usr/bin/steam
 
@@ -39,6 +40,22 @@ ENV LANG en_US.UTF-8
 ENV LANGUAGE en_US:en
 
 RUN useradd -ms /bin/bash steamuser
+
+FROM base AS build
+
+RUN apt-get update \
+	&& DEBIAN_FRONTEND=noninteractive apt-get -y install \
+		build-essential \
+		gperf \
+		meson \
+		ninja-build \
+		curl \
+		git \
+		rustc \
+		cmake
+
+FROM base AS run
+
 COPY entry.sh /
 
 CMD /entry.sh
